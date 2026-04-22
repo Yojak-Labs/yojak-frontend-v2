@@ -201,7 +201,7 @@ export function AppSidebar({ collapsed, onToggleCollapsed }: AppSidebarProps) {
                 )}
               >
                 <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-500 text-xs text-white">
+                  <AvatarFallback className="bg-gradient-to-br from-red-700 to-red-900 text-xs text-white">
                     {getInitials(displayName) || "U"}
                   </AvatarFallback>
                 </Avatar>

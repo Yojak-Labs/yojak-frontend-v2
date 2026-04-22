@@ -186,7 +186,7 @@ export function MobileNav() {
                 className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium hover:bg-accent/50"
               >
                 <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-purple-500 text-primary-foreground text-xs">
+                  <AvatarFallback className="bg-gradient-to-br from-red-700 to-red-900 text-primary-foreground text-xs">
                     {getInitials(displayName) || "U"}
                   </AvatarFallback>
                 </Avatar>
