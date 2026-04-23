@@ -146,8 +146,10 @@ apiClient.interceptors.request.use(
       const storedAccessToken = localStorage.getItem("accessToken");
       accessToken = normalizeToken(storedAccessToken);
     }
-    if (accessToken && config.headers) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
+    if (accessToken) {
+      const headers = (config.headers ?? ({} as unknown)) as Record<string, unknown>;
+      headers.Authorization = `Bearer ${accessToken}`;
+      config.headers = headers as unknown as typeof config.headers;
     }
     return config;
   },
@@ -183,6 +185,11 @@ apiClient.interceptors.response.use(
 
     // If 401 and not already retrying
     if (error.response?.status === 401 && !originalRequest._retry && !isRefreshEndpoint) {
+      const hasActiveAuthSession = hasStoredAuthSession();
+      if (!hasActiveAuthSession) {
+        return Promise.reject(error);
+      }
+
       if (isRefreshing) {
         // Queue this request until refresh completes
         return new Promise((resolve, reject) => {

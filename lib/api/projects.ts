@@ -61,13 +61,56 @@ const getProjectApiErrorMessage = (error: unknown, fallback: string) => {
   );
 };
 
+const buildProjectsEndpoint = (basePath: string, status?: ProjectStatus) =>
+  status ? `${basePath}?status=${encodeURIComponent(status)}` : basePath;
+
+const resolveAdminProjectsBasePath = () => {
+  const baseUrl = apiClient.defaults.baseURL || "";
+  // If the configured baseURL already includes `/v1/yojakai`, don't double-prefix it.
+  return baseUrl.includes("/v1/yojakai") ? "/admin/projects" : "/v1/yojakai/admin/projects";
+};
+
 export const projectsApi = {
   getAll: async (status?: ProjectStatus): Promise<ApiResponse<Project[]>> => {
     try {
-      const endpoint = status ? `/projects?status=${encodeURIComponent(status)}` : "/projects";
+      const endpoint = buildProjectsEndpoint("/projects", status);
       const response = await apiClient.get(endpoint);
       return { success: true, data: unwrapApiData<Project[]>(response.data) };
     } catch (error: unknown) {
+      return {
+        success: false,
+        error: getProjectApiErrorMessage(error, "Failed to fetch projects"),
+      };
+    }
+  },
+
+  getAllAdmin: async (status?: ProjectStatus): Promise<ApiResponse<Project[]>> => {
+    const adminEndpoint = resolveAdminProjectsBasePath();
+
+    try {
+      // Backend expects `status` to exist in the query even when unfiltered.
+      const response = await apiClient.get(adminEndpoint, {
+        params: { status: status ?? "" },
+      });
+      return { success: true, data: unwrapApiData<Project[]>(response.data) };
+    } catch (error: unknown) {
+      const httpStatus = (error as { response?: { status?: number } })?.response?.status;
+
+      // Some deployments may not expose an admin projects route. Fall back to the
+      // standard endpoint only when the admin route is missing.
+      if (httpStatus === 404) {
+        try {
+          const fallbackEndpoint = buildProjectsEndpoint("/projects", status);
+          const response = await apiClient.get(fallbackEndpoint);
+          return { success: true, data: unwrapApiData<Project[]>(response.data) };
+        } catch (fallbackError: unknown) {
+          return {
+            success: false,
+            error: getProjectApiErrorMessage(fallbackError, "Failed to fetch projects"),
+          };
+        }
+      }
+
       return {
         success: false,
         error: getProjectApiErrorMessage(error, "Failed to fetch projects"),

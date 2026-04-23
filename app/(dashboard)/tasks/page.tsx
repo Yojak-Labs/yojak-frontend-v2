@@ -261,8 +261,8 @@ export default function TasksPage() {
   });
 
   const { data: projectsData } = useQuery({
-    queryKey: ["projects"],
-    queryFn: () => projectsApi.getAll(),
+    queryKey: ["projects", isAdmin ? "admin" : "user"],
+    queryFn: () => (isAdmin ? projectsApi.getAllAdmin() : projectsApi.getAll()),
   });
 
   const createMutation = useMutation({
@@ -306,8 +306,8 @@ export default function TasksPage() {
     },
   });
 
-  const tasks = tasksData?.data || [];
-  const projects = projectsData?.data || [];
+  const tasks = Array.isArray(tasksData?.data) ? tasksData.data : [];
+  const projects = Array.isArray(projectsData?.data) ? projectsData.data : [];
   const getProjectOwnerId = (project: { userId?: string }) => {
     const projectRecord = project as unknown as Record<string, unknown>;
     const ownerId =

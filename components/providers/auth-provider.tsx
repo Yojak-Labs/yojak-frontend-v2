@@ -17,59 +17,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const initAuth = async () => {
-      const storedToken = localStorage.getItem("accessToken");
+      try {
+        const storedToken = localStorage.getItem("accessToken");
 
-      if (isAuthenticated && user && storedToken) {
-        setAccessToken(storedToken);
-        setIsLoading(false);
-        return;
-      }
+        if (isAuthenticated && user && storedToken) {
+          setAccessToken(storedToken);
+          return;
+        }
 
-      if (isValidStoredToken(storedToken)) {
-        setAccessToken(storedToken);
-        const tokenClaims = decodeJwtPayload<{
-          userId?: string;
-          email?: string;
-          role?: string;
-          roles?: string[];
-        }>(storedToken);
-        const resolvedRole =
-          (tokenClaims?.role as "admin" | "user" | undefined) ||
-          ((tokenClaims?.roles?.[0] as "admin" | "user" | undefined) ?? "user");
-        try {
-          const response =
-            resolvedRole === "admin" ? await adminApi.getMe() : await usersApi.getById();
+        if (isValidStoredToken(storedToken)) {
+          setAccessToken(storedToken);
+          const tokenClaims = decodeJwtPayload<{
+            userId?: string;
+            email?: string;
+            role?: string;
+            roles?: string[];
+          }>(storedToken);
+          const resolvedRole =
+            (tokenClaims?.role as "admin" | "user" | undefined) ||
+            ((tokenClaims?.roles?.[0] as "admin" | "user" | undefined) ?? "user");
+
+          const authRequest =
+            resolvedRole === "admin" ? adminApi.getMe() : usersApi.getById();
+          const timeoutRequest = new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Auth profile request timeout")), 8000)
+          );
+
+          const response = await Promise.race([authRequest, timeoutRequest]);
           if (response.success && response.data) {
             setUser(response.data);
             setIsAuthenticated(true);
-          } else {
-            setUser({
-              id: tokenClaims?.userId || "current-user",
-              email: tokenClaims?.email || "",
-              name: tokenClaims?.email?.split("@")[0] || "User",
-              role: resolvedRole,
-            });
-            setIsAuthenticated(true);
+            return;
           }
-        } catch {
-          setUser({
-            id: tokenClaims?.userId || "current-user",
-            email: tokenClaims?.email || "",
-            name: tokenClaims?.email?.split("@")[0] || "User",
-            role: resolvedRole,
-          });
-          setIsAuthenticated(true);
         }
-      } else {
+
         clearTokens();
         setUser(null);
         setIsAuthenticated(false);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     initAuth();
-  }, [setUser, setIsLoading, setIsAuthenticated]);
+  }, [isAuthenticated, setUser, setIsLoading, setIsAuthenticated, user]);
 
   return <>{children}</>;
 }

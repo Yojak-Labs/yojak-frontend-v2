@@ -38,6 +38,7 @@ import { CardSkeleton } from "@/components/ui/skeleton-loader";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { TaskForm } from "@/components/tasks/task-form";
 import { toast } from "@/components/ui/sonner";
+import { useAuthStore } from "@/lib/stores/auth-store";
 
 export default function TaskDetailPage({
   params,
@@ -49,6 +50,8 @@ export default function TaskDetailPage({
   const queryClient = useQueryClient();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === "admin";
 
   const { data: taskData, isLoading: taskLoading, error } = useQuery({
     queryKey: ["task", id],
@@ -56,8 +59,8 @@ export default function TaskDetailPage({
   });
 
   const { data: projectsData } = useQuery({
-    queryKey: ["projects"],
-    queryFn: () => projectsApi.getAll(),
+    queryKey: ["projects", isAdmin ? "admin" : "user"],
+    queryFn: () => (isAdmin ? projectsApi.getAllAdmin() : projectsApi.getAll()),
   });
 
   const { data: projectData } = useQuery({

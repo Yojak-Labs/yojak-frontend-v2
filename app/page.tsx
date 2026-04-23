@@ -25,6 +25,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { LogoLink } from "@/components/layout/logo-link";
 import { LogoMark } from "@/components/layout/logo-mark";
 import { cn } from "@/lib/utils";
+import { useAuthStore } from "@/lib/stores/auth-store";
 
 const agents = [
   { id: "a1", name: "Regulation Agent", message: "Analyzing regulations..." },
@@ -93,10 +94,10 @@ const steps = [
 ];
 
 const quickLinks = [
-  { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { title: "Projects", href: "/projects", icon: FolderKanban },
-  { title: "Tasks", href: "/tasks", icon: CheckSquare },
-  { title: "Profile", href: "/profile", icon: Users },
+  { title: "Dashboard", href: "/demo/dashboard", icon: LayoutDashboard },
+  { title: "Projects", href: "/demo/projects", icon: FolderKanban },
+  { title: "Tasks", href: "/demo/tasks", icon: CheckSquare },
+  { title: "Profile", href: "/demo/profile", icon: Users },
 ];
 
 const adminLinks = [
@@ -109,7 +110,10 @@ const adminLinks = [
 export default function HomePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeAgent, setActiveAgent] = useState(0);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const { isAuthenticated } = useAuthStore();
   const progress = useMemo(() => ((activeAgent + 1) / agents.length) * 100, [activeAgent]);
+  const internalEntryHref = isAuthenticated ? "/dashboard" : "/login";
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -119,9 +123,26 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const onScroll = () => {
+      setIsScrolled(window.scrollY > 8);
+    };
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
     <div className="min-h-screen bg-background text-foreground">
-      <header className="sticky top-0 z-50 border-b border-border/70 bg-background/90 backdrop-blur-2xl">
+      <header
+        className={cn(
+          "sticky top-0 z-50 border-b transition-all duration-300",
+          isScrolled
+            ? "border-border/80 bg-background/75 backdrop-blur-xl shadow-sm"
+            : "border-border/70 bg-background/90 backdrop-blur-none"
+        )}
+      >
         <nav className="mx-auto flex h-18 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <LogoLink className="flex items-center gap-3">
             <LogoMark className="h-10 w-10 rounded-2xl" />
@@ -134,7 +155,7 @@ export default function HomePage() {
           <div className="hidden items-center gap-3 md:flex">
             <ThemeToggle />
             <Button variant="ghost" asChild>
-              <Link href="/dashboard">AI Pipeline</Link>
+              <Link href="#live-agent-execution">AI Pipeline</Link>
             </Button>
             <Button variant="outline" asChild>
               <Link href="/login">Sign In</Link>
@@ -156,7 +177,7 @@ export default function HomePage() {
         {mobileMenuOpen && (
           <div className="border-t border-border/70 bg-background/95 p-4 md:hidden">
             <div className="space-y-2">
-              <Link href="/dashboard" className="block rounded-xl px-3 py-2 hover:bg-accent/60">
+              <Link href="#live-agent-execution" className="block rounded-xl px-3 py-2 hover:bg-accent/60">
                 AI Pipeline
               </Link>
               <Link href="/projects" className="block rounded-xl px-3 py-2 hover:bg-accent/60">
@@ -202,7 +223,7 @@ export default function HomePage() {
                   <Link href="/register">Start Designing</Link>
                 </Button>
                 <Button size="lg" variant="outline" asChild>
-                  <Link href="/dashboard">View Live Demo</Link>
+                  <Link href={internalEntryHref}>View Live Demo</Link>
                 </Button>
               </div>
             </div>
@@ -272,7 +293,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
+        <section id="live-agent-execution" className="mx-auto max-w-7xl px-4 pb-16 sm:px-6 lg:px-8">
           <Card className="glass-strong border-border/70">
             <CardHeader className="pb-3">
               <CardTitle className="flex items-center justify-between text-xl">
@@ -347,7 +368,9 @@ export default function HomePage() {
           <Card className="overflow-hidden">
             <CardHeader>
               <CardTitle>Workspace Access</CardTitle>
-              <CardDescription>Jump to operational areas with premium AI SaaS workflows.</CardDescription>
+              <CardDescription>
+                Click any section to view a demo interface.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -358,8 +381,12 @@ export default function HomePage() {
                     className="glass-panel group rounded-2xl p-4 transition-all duration-300 hover:scale-[1.02] hover:border-red-400/30"
                   >
                     <link.icon className="mb-3 h-5 w-5 text-primary" />
-                    <p className="font-medium">{link.title}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">Open {link.title}</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="font-medium">{link.title}</p>
+                      <span className="rounded-md border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                        Demo
+                      </span>
+                    </div>
                   </Link>
                 ))}
               </div>

@@ -218,8 +218,8 @@ export default function DashboardPage() {
   const isAdmin = user?.role === "admin";
 
   const { data: projectsData, isLoading: projectsLoading } = useQuery({
-    queryKey: ["projects"],
-    queryFn: () => projectsApi.getAll(),
+    queryKey: ["projects", isAdmin ? "admin" : "user"],
+    queryFn: () => (isAdmin ? projectsApi.getAllAdmin() : projectsApi.getAll()),
   });
 
   const { data: tasksData, isLoading: tasksLoading } = useQuery({

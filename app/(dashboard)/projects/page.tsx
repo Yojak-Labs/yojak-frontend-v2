@@ -149,8 +149,11 @@ export default function ProjectsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["projects", statusFilter],
-    queryFn: () => projectsApi.getAll(statusFilter === "all" ? undefined : statusFilter),
+    queryKey: ["projects", isAdmin ? "admin" : "user", statusFilter],
+    queryFn: () => {
+      const resolvedStatus = statusFilter === "all" ? undefined : statusFilter;
+      return isAdmin ? projectsApi.getAllAdmin(resolvedStatus) : projectsApi.getAll(resolvedStatus);
+    },
   });
 
   const deleteMutation = useMutation({
@@ -165,7 +168,7 @@ export default function ProjectsPage() {
     },
   });
 
-  const projects = data?.data || [];
+  const projects = Array.isArray(data?.data) ? data.data : [];
   const filteredProjects = projects.filter((project) =>
     project.name.toLowerCase().includes(search.toLowerCase())
   );

@@ -145,9 +145,67 @@ export default function ProfilePage() {
       .toUpperCase()
       .slice(0, 2);
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString("en-US", {
+  const getRecordDateValue = (key: string) => {
+    const value = userRecord[key];
+    if (typeof value === "string" || typeof value === "number") return value;
+    return undefined;
+  };
+
+  const getNestedDateValue = (path: string[]) => {
+    let cursor: unknown = userRecord;
+    for (const key of path) {
+      if (!cursor || typeof cursor !== "object") return undefined;
+      cursor = (cursor as Record<string, unknown>)[key];
+    }
+    if (typeof cursor === "string" || typeof cursor === "number") return cursor;
+    return undefined;
+  };
+
+  const normalizedCreatedAt =
+    user?.createdAt ??
+    getRecordDateValue("createdAt") ??
+    getNestedDateValue(["baseEntity", "createdAt"]) ??
+    getNestedDateValue(["base_entity", "created_at"]) ??
+    getRecordDateValue("created_at") ??
+    getRecordDateValue("createdOn") ??
+    getRecordDateValue("created_on") ??
+    getRecordDateValue("created");
+
+  const normalizeDateInput = (value: unknown) => {
+    if (typeof value === "number") {
+      // Heuristic: treat small values as seconds since epoch.
+      return value < 1_000_000_000_000 ? value * 1000 : value;
+    }
+
+    if (typeof value !== "string") return value;
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+
+    // Backend may send ISO with microseconds (6 digits). JS Date parsing is not consistent,
+    // so clamp to milliseconds (3 digits) if needed: `.560435+05:30` -> `.560+05:30`.
+    const microseconds = trimmed.replace(
+      /(\.\d{3})\d+([zZ]|[+-]\d{2}:\d{2})$/,
+      "$1$2"
+    );
+    return microseconds;
+  };
+
+  const formatDate = (value?: unknown) => {
+    if (value === undefined || value === null) return "N/A";
+
+    const normalized = normalizeDateInput(value);
+    if (normalized === undefined || normalized === null) return "N/A";
+
+    const asDate =
+      value instanceof Date
+        ? value
+        : typeof normalized === "string" || typeof normalized === "number"
+          ? new Date(normalized)
+          : null;
+
+    if (!asDate || Number.isNaN(asDate.getTime())) return "N/A";
+
+    return asDate.toLocaleDateString("en-US", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -224,7 +282,7 @@ export default function ProfilePage() {
                 <div className="text-center sm:text-right">
                   <p className="text-sm text-muted-foreground">Member since</p>
                   <p className="text-sm font-medium text-foreground">
-                    {formatDate(user.createdAt)}
+                    {formatDate(normalizedCreatedAt)}
                   </p>
                 </div>
               </div>
@@ -456,7 +514,7 @@ export default function ProfilePage() {
                         <div>
                           <p className="font-medium text-foreground">Account Created</p>
                           <p className="text-sm text-muted-foreground">
-                            {formatDate(user.createdAt)}
+                            {formatDate(normalizedCreatedAt)}
                           </p>
                         </div>
                       </div>
