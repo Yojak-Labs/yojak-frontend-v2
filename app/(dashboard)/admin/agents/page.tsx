@@ -443,44 +443,64 @@ export default function AdminAgentsPage() {
 
   const createMutation = useMutation({
     mutationFn: agentsApi.create,
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (!result.success) {
+        toast.error(result.error || "Failed to create agent");
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["agents"] });
+      queryClient.refetchQueries({ queryKey: ["agents"] });
       toast.success("Agent created successfully");
       setShowCreateDialog(false);
     },
-    onError: () => {
-      toast.error("Failed to create agent");
+    onError: (err) => {
+      toast.error((err as Error)?.message || "Failed to create agent");
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Parameters<typeof agentsApi.update>[1] }) =>
       agentsApi.update(id, data),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (!result.success) {
+        toast.error(result.error || "Failed to update agent");
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["agents"] });
+      queryClient.refetchQueries({ queryKey: ["agents"] });
       toast.success("Agent updated successfully");
       setEditAgent(null);
     },
-    onError: () => {
-      toast.error("Failed to update agent. The API may not fully support this operation.");
+    onError: (err) => {
+      toast.error(
+        (err as Error)?.message ||
+          "Failed to update agent. The API may not fully support this operation."
+      );
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => agentsApi.delete(id),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (!result.success) {
+        toast.error(result.error || "Failed to delete agent");
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["agents"] });
+      queryClient.refetchQueries({ queryKey: ["agents"] });
       toast.success("Agent deleted successfully");
       setDeleteId(null);
     },
-    onError: () => {
-      toast.error("Failed to delete agent");
+    onError: (err) => {
+      toast.error((err as Error)?.message || "Failed to delete agent");
     },
   });
 
-  const agents = data?.data || [];
+  const hasLoadError = !!error || (data && !data.success);
+  const agents = data?.success ? data.data || [] : [];
+  const searchTerm = search.toLowerCase();
   const filteredAgents = agents.filter((agent) =>
-    agent.name.toLowerCase().includes(search.toLowerCase())
+    (agent.name || "").toLowerCase().includes(searchTerm)
   );
 
   const handleFormSubmit = (formData: AgentFormData, isEdit: boolean) => {
@@ -508,21 +528,6 @@ export default function AdminAgentsPage() {
       createMutation.mutate(payload);
     }
   };
-
-  if (error) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-destructive">Failed to load agents</p>
-        <Button
-          variant="outline"
-          className="mt-4"
-          onClick={() => queryClient.invalidateQueries({ queryKey: ["agents"] })}
-        >
-          Retry
-        </Button>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -556,6 +561,22 @@ export default function AdminAgentsPage() {
       {/* Content */}
       {isLoading ? (
         <TableSkeleton rows={6} />
+      ) : hasLoadError ? (
+        <Card>
+          <CardContent className="py-10 text-center space-y-4">
+            <p className="text-destructive">
+              {(error as Error | undefined)?.message ||
+                data?.error ||
+                "Failed to load agents"}
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => queryClient.invalidateQueries({ queryKey: ["agents"] })}
+            >
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
       ) : filteredAgents.length === 0 ? (
         <Card>
           <CardContent className="py-0">

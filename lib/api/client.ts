@@ -1,7 +1,14 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "https://yojak-backend.onrender.com/v1/yojakai";
+const normalizeBaseUrl = (value: string) => {
+  const trimmed = value.trim().replace(/\/+$/, "");
+  if (!trimmed) return trimmed;
+  return trimmed.includes("/v1/yojakai") ? trimmed : `${trimmed}/v1/yojakai`;
+};
+
+const API_BASE_URL = normalizeBaseUrl(
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "https://yojak-backend.onrender.com/v1/yojakai"
+);
 
 // Create axios instance
 export const apiClient = axios.create({

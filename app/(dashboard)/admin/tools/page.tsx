@@ -232,38 +232,50 @@ export default function AdminToolsPage() {
 
   const createMutation = useMutation({
     mutationFn: toolsApi.create,
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (!result.success) {
+        toast.error(result.error || "Failed to create tool");
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["tools"] });
       toast.success("Tool created successfully");
       setShowCreateDialog(false);
     },
-    onError: () => {
-      toast.error("Failed to create tool");
+    onError: (err) => {
+      toast.error((err as Error)?.message || "Failed to create tool");
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: Parameters<typeof toolsApi.update>[1] }) =>
       toolsApi.update(id, data),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (!result.success) {
+        toast.error(result.error || "Failed to update tool");
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["tools"] });
       toast.success("Tool updated successfully");
       setEditTool(null);
     },
-    onError: () => {
-      toast.error("Failed to update tool");
+    onError: (err) => {
+      toast.error((err as Error)?.message || "Failed to update tool");
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => toolsApi.delete(id),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (!result.success) {
+        toast.error(result.error || "Failed to delete tool");
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["tools"] });
       toast.success("Tool deleted successfully");
       setDeleteId(null);
     },
-    onError: () => {
-      toast.error("Failed to delete tool");
+    onError: (err) => {
+      toast.error((err as Error)?.message || "Failed to delete tool");
     },
   });
 
