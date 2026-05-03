@@ -151,23 +151,41 @@ export interface CreateAdminPayload {
 }
 
 // Agent types
+export type AgentConfiguration = Record<string, unknown>;
+
+export interface AgentTool {
+  id: string;
+  source: string;
+  sourceId: string;
+  name: string;
+}
+
 export interface Agent {
   id: string;
   name: string;
-  description?: string;
+  description: string;
+  model: string;
+  userPrompt: string;
+  systemPrompt: string;
+  configuration: AgentConfiguration;
+  tools: AgentTool[];
+  createdAt?: string;
+  updatedAt?: string;
+
+  // Backwards-compatible fields (older API versions)
   type?: string;
   capabilities?: string[];
   status?: "active" | "inactive";
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface CreateAgentPayload {
   name: string;
-  description?: string;
-  type?: string;
-  capabilities?: string[];
-  status?: "active" | "inactive";
+  description: string;
+  model: string;
+  userPrompt: string;
+  systemPrompt: string;
+  configuration: AgentConfiguration;
+  tools: AgentTool[];
 }
 
 // Tool types
