@@ -43,6 +43,17 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "@/components/ui/sonner";
 import type { Agent } from "@/lib/types";
 
+const agentConfigurationSchema = z.object({
+  maxTokens: z.coerce
+    .number()
+    .int("Max tokens must be an integer")
+    .min(1, "Max tokens must be at least 1"),
+  temperature: z.coerce
+    .number()
+    .min(0, "Temperature must be between 0 and 2")
+    .max(2, "Temperature must be between 0 and 2"),
+});
+
 const agentToolSchema = z.object({
   id: z.string().min(1, "Tool ID is required"),
   source: z.string().min(1, "Source is required"),
@@ -56,20 +67,7 @@ const agentSchema = z.object({
   model: z.string().min(1, "Model is required"),
   userPrompt: z.string().min(1, "User prompt is required"),
   systemPrompt: z.string().min(1, "System prompt is required"),
-  configuration: z
-    .string()
-    .min(1, "Configuration JSON is required")
-    .refine(
-      (value) => {
-        try {
-          const parsed = JSON.parse(value);
-          return !!parsed && typeof parsed === "object" && !Array.isArray(parsed);
-        } catch {
-          return false;
-        }
-      },
-      { message: "Configuration must be a valid JSON object" }
-    ),
+  configuration: agentConfigurationSchema,
   tools: z.array(agentToolSchema).min(1, "At least one tool is required"),
 });
 
@@ -178,7 +176,14 @@ function AgentForm({
       model: agent?.model || "",
       userPrompt: agent?.userPrompt || "",
       systemPrompt: agent?.systemPrompt || "",
-      configuration: agent?.configuration ? JSON.stringify(agent.configuration, null, 2) : "{}",
+      configuration: {
+        maxTokens:
+          typeof agent?.configuration?.maxTokens === "number" ? agent.configuration.maxTokens : 1024,
+        temperature:
+          typeof agent?.configuration?.temperature === "number"
+            ? agent.configuration.temperature
+            : 0.7,
+      },
       tools:
         agent?.tools && agent.tools.length > 0
           ? agent.tools
@@ -266,20 +271,41 @@ function AgentForm({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="configuration">Configuration (JSON) *</Label>
-        <Textarea
-          id="configuration"
-          placeholder='{"temperature": 0.7, "maxTokens": 1024}'
-          rows={6}
-          className={`font-mono text-sm ${errors.configuration ? "border-destructive" : ""}`}
-          {...register("configuration")}
-        />
-        {errors.configuration && (
-          <p className="text-sm text-destructive">{errors.configuration.message}</p>
-        )}
-        <p className="text-xs text-muted-foreground">
-          Must be a valid JSON object (not an array).
-        </p>
+        <Label>Configuration *</Label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="configuration.maxTokens">Max Tokens *</Label>
+            <Input
+              id="configuration.maxTokens"
+              type="number"
+              inputMode="numeric"
+              placeholder="1024"
+              {...register("configuration.maxTokens")}
+              className={errors.configuration?.maxTokens ? "border-destructive" : ""}
+            />
+            {errors.configuration?.maxTokens && (
+              <p className="text-sm text-destructive">{errors.configuration.maxTokens.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="configuration.temperature">Temperature *</Label>
+            <Input
+              id="configuration.temperature"
+              type="number"
+              step="0.1"
+              inputMode="decimal"
+              placeholder="0.7"
+              {...register("configuration.temperature")}
+              className={errors.configuration?.temperature ? "border-destructive" : ""}
+            />
+            {errors.configuration?.temperature && (
+              <p className="text-sm text-destructive">
+                {errors.configuration.temperature.message}
+              </p>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -458,27 +484,16 @@ export default function AdminAgentsPage() {
   );
 
   const handleFormSubmit = (formData: AgentFormData, isEdit: boolean) => {
-    let configuration: Record<string, unknown>;
-
-    try {
-      const parsed = JSON.parse(formData.configuration);
-      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-        toast.error("Configuration must be a JSON object (map)");
-        return;
-      }
-      configuration = parsed as Record<string, unknown>;
-    } catch {
-      toast.error("Invalid JSON in configuration field");
-      return;
-    }
-
     const payload = {
       name: formData.name.trim(),
       description: formData.description.trim(),
       model: formData.model.trim(),
       userPrompt: formData.userPrompt.trim(),
       systemPrompt: formData.systemPrompt.trim(),
-      configuration,
+      configuration: {
+        maxTokens: formData.configuration.maxTokens,
+        temperature: formData.configuration.temperature,
+      },
       tools: formData.tools.map((tool) => ({
         id: tool.id.trim(),
         source: tool.source.trim(),
@@ -578,7 +593,7 @@ export default function AdminAgentsPage() {
 
       {/* Create Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent>
+        <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add AI Agent</DialogTitle>
             <DialogDescription>
@@ -595,7 +610,7 @@ export default function AdminAgentsPage() {
 
       {/* Edit Dialog */}
       <Dialog open={!!editAgent} onOpenChange={(open) => !open && setEditAgent(null)}>
-        <DialogContent>
+        <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit AI Agent</DialogTitle>
             <DialogDescription>Update agent configuration</DialogDescription>

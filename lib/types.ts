@@ -151,7 +151,10 @@ export interface CreateAdminPayload {
 }
 
 // Agent types
-export type AgentConfiguration = Record<string, unknown>;
+export interface AgentConfiguration {
+  maxTokens: number;
+  temperature: number;
+}
 
 export interface AgentTool {
   id: string;
