@@ -238,6 +238,7 @@ export default function AdminToolsPage() {
         return;
       }
       queryClient.invalidateQueries({ queryKey: ["tools"] });
+      queryClient.refetchQueries({ queryKey: ["tools"] });
       toast.success("Tool created successfully");
       setShowCreateDialog(false);
     },
@@ -255,6 +256,7 @@ export default function AdminToolsPage() {
         return;
       }
       queryClient.invalidateQueries({ queryKey: ["tools"] });
+      queryClient.refetchQueries({ queryKey: ["tools"] });
       toast.success("Tool updated successfully");
       setEditTool(null);
     },
@@ -271,6 +273,7 @@ export default function AdminToolsPage() {
         return;
       }
       queryClient.invalidateQueries({ queryKey: ["tools"] });
+      queryClient.refetchQueries({ queryKey: ["tools"] });
       toast.success("Tool deleted successfully");
       setDeleteId(null);
     },
@@ -279,11 +282,13 @@ export default function AdminToolsPage() {
     },
   });
 
-  const tools = data?.data || [];
+  const hasLoadError = !!error || (data && !data.success);
+  const tools = data?.success ? data.data || [] : [];
   const searchTerm = search.toLowerCase();
   const filteredTools = tools.filter((tool) =>
     (tool.name || "").toLowerCase().includes(searchTerm)
   );
+  const hasNoTools = tools.length === 0;
 
   const handleFormSubmit = (formData: ToolFormData, isEdit: boolean) => {
     let parameters: Record<string, unknown>;
@@ -314,21 +319,6 @@ export default function AdminToolsPage() {
     }
   };
 
-  if (error) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-destructive">Failed to load tools</p>
-        <Button
-          variant="outline"
-          className="mt-4"
-          onClick={() => queryClient.invalidateQueries({ queryKey: ["tools"] })}
-        >
-          Retry
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -358,19 +348,35 @@ export default function AdminToolsPage() {
 
       {isLoading ? (
         <TableSkeleton rows={6} />
+      ) : hasLoadError ? (
+        <Card>
+          <CardContent className="py-10 text-center space-y-4">
+            <p className="text-destructive">
+              {(error as Error | undefined)?.message || data?.error || "Failed to load tools"}
+            </p>
+            <Button
+              variant="outline"
+              onClick={() => queryClient.invalidateQueries({ queryKey: ["tools"] })}
+            >
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
       ) : filteredTools.length === 0 ? (
         <Card>
           <CardContent className="py-0">
             <EmptyState
               icon={Wrench}
-              title={search ? "No matching tools" : "No tools yet"}
+              title={hasNoTools ? "No tools yet" : search ? "No matching tools" : "No tools yet"}
               description={
-                search
-                  ? "Try adjusting your search"
-                  : "Add your first tool to extend platform capabilities"
+                hasNoTools
+                  ? "Add your first tool to extend platform capabilities with a logo"
+                  : search
+                    ? "Try adjusting your search"
+                    : "Add your first tool to extend platform capabilities with a logo"
               }
               action={
-                !search && (
+                (hasNoTools || !search) && (
                   <Button onClick={() => setShowCreateDialog(true)}>
                     <Plus className="mr-2 h-4 w-4" />
                     Add Tool

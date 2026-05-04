@@ -1,6 +1,14 @@
 import { apiClient, unwrapApiData } from "./client";
 import type { Tool, CreateToolPayload, ApiResponse } from "../types";
 
+const resolveToolsBasePath = () => {
+  const baseUrl = apiClient.defaults.baseURL || "";
+  // If the configured baseURL already includes `/v1/yojakai`, don't double-prefix it.
+  return baseUrl.includes("/v1/yojakai") ? "/tools" : "/v1/yojakai/tools";
+};
+
+const resolveToolByIdPath = (id: string) => `${resolveToolsBasePath()}/${encodeURIComponent(id)}`;
+
 const unwrapToolsList = (payload: unknown): Tool[] => {
   const unwrapped = unwrapApiData<unknown>(payload);
   if (Array.isArray(unwrapped)) return unwrapped as Tool[];
@@ -17,7 +25,7 @@ const unwrapToolsList = (payload: unknown): Tool[] => {
 export const toolsApi = {
   getAll: async (): Promise<ApiResponse<Tool[]>> => {
     try {
-      const response = await apiClient.get("/tools");
+      const response = await apiClient.get(resolveToolsBasePath());
       return { success: true, data: unwrapToolsList(response.data) };
     } catch (error: unknown) {
       const err = error as {
@@ -41,7 +49,7 @@ export const toolsApi = {
 
   getById: async (id: string): Promise<ApiResponse<Tool>> => {
     try {
-      const response = await apiClient.get(`/tools/${id}`);
+      const response = await apiClient.get(resolveToolByIdPath(id));
       return { success: true, data: unwrapApiData<Tool>(response.data) };
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
@@ -54,7 +62,7 @@ export const toolsApi = {
 
   create: async (payload: CreateToolPayload): Promise<ApiResponse<Tool>> => {
     try {
-      const response = await apiClient.post("/tools", payload);
+      const response = await apiClient.post(resolveToolsBasePath(), payload);
       return { success: true, data: unwrapApiData<Tool>(response.data) };
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
@@ -67,7 +75,7 @@ export const toolsApi = {
 
   update: async (id: string, payload: Partial<CreateToolPayload>): Promise<ApiResponse<Tool>> => {
     try {
-      const response = await apiClient.put(`/tools/${id}`, payload);
+      const response = await apiClient.put(resolveToolByIdPath(id), payload);
       return { success: true, data: unwrapApiData<Tool>(response.data) };
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
@@ -80,7 +88,7 @@ export const toolsApi = {
 
   delete: async (id: string): Promise<ApiResponse<void>> => {
     try {
-      await apiClient.delete(`/tools/${id}`);
+      await apiClient.delete(resolveToolByIdPath(id));
       return { success: true };
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };

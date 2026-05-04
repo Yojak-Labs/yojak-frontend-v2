@@ -502,6 +502,7 @@ export default function AdminAgentsPage() {
   const filteredAgents = agents.filter((agent) =>
     (agent.name || "").toLowerCase().includes(searchTerm)
   );
+  const hasNoAgents = agents.length === 0;
 
   const handleFormSubmit = (formData: AgentFormData, isEdit: boolean) => {
     const payload = {
@@ -582,14 +583,16 @@ export default function AdminAgentsPage() {
           <CardContent className="py-0">
             <EmptyState
               icon={Bot}
-              title={search ? "No matching agents" : "No agents yet"}
+              title={hasNoAgents ? "No agents yet" : search ? "No matching agents" : "No agents yet"}
               description={
-                search
-                  ? "Try adjusting your search"
-                  : "Add your first AI agent to automate tasks"
+                hasNoAgents
+                  ? "Add your first AI agent to automate tasks"
+                  : search
+                    ? "Try adjusting your search"
+                    : "Add your first AI agent to automate tasks"
               }
               action={
-                !search && (
+                (hasNoAgents || !search) && (
                   <Button onClick={() => setShowCreateDialog(true)}>
                     <Plus className="mr-2 h-4 w-4" />
                     Add Agent
