@@ -60,15 +60,28 @@ const getToolListKey = (tool: Tool, index: number) => {
 
 function ToolCard({
   tool,
+  onView,
   onEdit,
   onDelete,
 }: {
   tool: Tool;
+  onView: (tool: Tool) => void;
   onEdit: (tool: Tool) => void;
   onDelete: (id: string) => void;
 }) {
   return (
-    <Card className="group hover:shadow-md transition-shadow">
+    <Card
+      role="button"
+      tabIndex={0}
+      onClick={() => onView(tool)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onView(tool);
+        }
+      }}
+      className="group hover:shadow-md transition-shadow cursor-pointer"
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
@@ -82,7 +95,12 @@ function ToolCard({
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -224,6 +242,7 @@ export default function AdminToolsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editTool, setEditTool] = useState<Tool | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [viewTool, setViewTool] = useState<Tool | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["tools"],
@@ -392,12 +411,94 @@ export default function AdminToolsPage() {
             <ToolCard
               key={getToolListKey(tool, index)}
               tool={tool}
+              onView={setViewTool}
               onEdit={setEditTool}
               onDelete={setDeleteId}
             />
           ))}
         </div>
       )}
+
+      {/* View Dialog */}
+      <Dialog open={!!viewTool} onOpenChange={(open) => !open && setViewTool(null)}>
+        <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Tool Details</DialogTitle>
+            <DialogDescription>View the full tool definition and parameters.</DialogDescription>
+          </DialogHeader>
+
+          {viewTool && (
+            <div className="space-y-6">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label>Name</Label>
+                  <p className="text-sm">{viewTool.name}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label>ID</Label>
+                  <p className="text-sm font-mono break-all">{viewTool.id}</p>
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <Label>Description</Label>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    {viewTool.description}
+                  </p>
+                </div>
+                {viewTool.status && (
+                  <div className="space-y-1">
+                    <Label>Status</Label>
+                    <p className="text-sm capitalize">{viewTool.status}</p>
+                  </div>
+                )}
+                {viewTool.createdAt && (
+                  <div className="space-y-1">
+                    <Label>Created</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(viewTool.createdAt), "PPpp")}
+                    </p>
+                  </div>
+                )}
+                {viewTool.updatedAt && (
+                  <div className="space-y-1">
+                    <Label>Updated</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(viewTool.updatedAt), "PPpp")}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Parameters (JSON)</Label>
+                <div className="rounded-xl border bg-muted/20 p-3 text-sm font-mono whitespace-pre-wrap">
+                  {JSON.stringify(viewTool.parameters || {}, null, 2)}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setViewTool(null);
+                    setEditTool(viewTool);
+                  }}
+                >
+                  Edit
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setViewTool(null);
+                    setDeleteId(viewTool.id);
+                  }}
+                >
+                  Delete
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent>

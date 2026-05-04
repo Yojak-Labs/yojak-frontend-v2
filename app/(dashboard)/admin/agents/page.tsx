@@ -41,6 +41,14 @@ import { TableSkeleton } from "@/components/ui/skeleton-loader";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "@/components/ui/sonner";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { Agent } from "@/lib/types";
 
 const agentConfigurationSchema = z.object({
@@ -75,15 +83,28 @@ type AgentFormData = z.infer<typeof agentSchema>;
 
 function AgentCard({
   agent,
+  onView,
   onEdit,
   onDelete,
 }: {
   agent: Agent;
+  onView: (agent: Agent) => void;
   onEdit: (agent: Agent) => void;
   onDelete: (id: string) => void;
 }) {
   return (
-    <Card className="group hover:shadow-md transition-shadow">
+    <Card
+      role="button"
+      tabIndex={0}
+      onClick={() => onView(agent)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onView(agent);
+        }
+      }}
+      className="group hover:shadow-md transition-shadow cursor-pointer"
+    >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
@@ -97,7 +118,12 @@ function AgentCard({
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -435,6 +461,7 @@ export default function AdminAgentsPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [editAgent, setEditAgent] = useState<Agent | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [viewAgent, setViewAgent] = useState<Agent | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ["agents"],
@@ -608,12 +635,149 @@ export default function AdminAgentsPage() {
             <AgentCard
               key={agent.id}
               agent={agent}
+              onView={setViewAgent}
               onEdit={setEditAgent}
               onDelete={setDeleteId}
             />
           ))}
         </div>
       )}
+
+      {/* View Dialog */}
+      <Dialog open={!!viewAgent} onOpenChange={(open) => !open && setViewAgent(null)}>
+        <DialogContent className="max-h-[calc(100vh-2rem)] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Agent Details</DialogTitle>
+            <DialogDescription>View the full configuration for this agent.</DialogDescription>
+          </DialogHeader>
+
+          {viewAgent && (
+            <div className="space-y-6">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1">
+                  <Label>Name</Label>
+                  <p className="text-sm">{viewAgent.name}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label>ID</Label>
+                  <p className="text-sm font-mono break-all">{viewAgent.id}</p>
+                </div>
+                <div className="space-y-1 sm:col-span-2">
+                  <Label>Description</Label>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    {viewAgent.description}
+                  </p>
+                </div>
+                <div className="space-y-1">
+                  <Label>Model</Label>
+                  <p className="text-sm">{viewAgent.model}</p>
+                </div>
+                <div className="space-y-1">
+                  <Label>Configuration</Label>
+                  <p className="text-sm text-muted-foreground">
+                    maxTokens:{" "}
+                    <span className="font-mono text-foreground">
+                      {viewAgent.configuration?.maxTokens ?? "-"}
+                    </span>
+                    {" · "}
+                    temperature:{" "}
+                    <span className="font-mono text-foreground">
+                      {viewAgent.configuration?.temperature ?? "-"}
+                    </span>
+                  </p>
+                </div>
+                {viewAgent.createdAt && (
+                  <div className="space-y-1">
+                    <Label>Created</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(viewAgent.createdAt), "PPpp")}
+                    </p>
+                  </div>
+                )}
+                {viewAgent.updatedAt && (
+                  <div className="space-y-1">
+                    <Label>Updated</Label>
+                    <p className="text-sm text-muted-foreground">
+                      {format(new Date(viewAgent.updatedAt), "PPpp")}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>User Prompt</Label>
+                <div className="rounded-xl border bg-muted/20 p-3 text-sm whitespace-pre-wrap">
+                  {viewAgent.userPrompt}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>System Prompt</Label>
+                <div className="rounded-xl border bg-muted/20 p-3 text-sm whitespace-pre-wrap">
+                  {viewAgent.systemPrompt}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Tools</Label>
+                  <span className="text-xs text-muted-foreground">
+                    {viewAgent.tools?.length ?? 0} total
+                  </span>
+                </div>
+
+                {viewAgent.tools && viewAgent.tools.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>ID</TableHead>
+                        <TableHead>Source</TableHead>
+                        <TableHead>Source ID</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {viewAgent.tools.map((tool, index) => (
+                        <TableRow key={`${tool.id}-${index}`}>
+                          <TableCell className="whitespace-normal">{tool.name}</TableCell>
+                          <TableCell className="font-mono whitespace-normal break-all">
+                            {tool.id}
+                          </TableCell>
+                          <TableCell className="whitespace-normal">{tool.source}</TableCell>
+                          <TableCell className="whitespace-normal break-all">{tool.sourceId}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No tools configured.</p>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setViewAgent(null);
+                    setEditAgent(viewAgent);
+                  }}
+                >
+                  Edit
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={() => {
+                    setViewAgent(null);
+                    setDeleteId(viewAgent.id);
+                  }}
+                >
+                  Delete
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Create Dialog */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
