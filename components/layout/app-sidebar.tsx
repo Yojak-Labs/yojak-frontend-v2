@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Bot,
-  CheckSquare,
   ChevronDown,
   ChevronsLeft,
   ChevronsRight,
@@ -46,7 +45,6 @@ interface AppSidebarProps {
 const navItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Projects", href: "/projects", icon: FolderKanban },
-  { title: "Tasks", href: "/tasks", icon: CheckSquare },
 ];
 
 const adminNavItems: NavItem[] = [
