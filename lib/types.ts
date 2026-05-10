@@ -81,6 +81,7 @@ export interface Project {
   end_date?: string;
   requirements?: string;
   status: ProjectStatus;
+  tasks?: Task[];
   createdAt?: string;
   updatedAt?: string;
   userId?: string;
@@ -111,7 +112,9 @@ export interface Task {
   description?: string;
   status: TaskStatus;
   priority: TaskPriority;
+  execution_order?: number;
   start_date?: string;
+  end_date?: string;
   due_date?: string;
   estimated_hours?: number;
   actual_hours?: number;
@@ -127,10 +130,20 @@ export interface CreateTaskPayload {
   status?: TaskStatus;
   priority?: TaskPriority;
   start_date?: string;
+  end_date?: string;
   due_date?: string;
   estimated_hours?: number;
-  actual_hours?: number;
-  dependencies?: string[];
+}
+
+export interface UpdateTaskPayload {
+  title?: string;
+  description?: string;
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  start_date?: string;
+  end_date?: string;
+  due_date?: string;
+  estimated_hours?: number;
 }
 
 // Admin types
