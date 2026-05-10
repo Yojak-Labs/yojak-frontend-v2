@@ -6,7 +6,6 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   FolderKanban,
-  CheckSquare,
   Users,
   Shield,
   Bot,
@@ -37,7 +36,6 @@ interface NavItem {
 const navItems: NavItem[] = [
   { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { title: "Projects", href: "/projects", icon: FolderKanban },
-  { title: "Tasks", href: "/tasks", icon: CheckSquare },
 ];
 
 const adminNavItems: NavItem[] = [
