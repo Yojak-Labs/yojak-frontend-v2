@@ -88,7 +88,7 @@ export default function TaskDetailPage({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks"] });
       toast.success("Task deleted successfully");
-      router.push("/tasks");
+      router.push(taskData?.data?.project_id ? `/projects/${taskData.data.project_id}` : "/projects");
     },
     onError: () => {
       toast.error("Failed to delete task");
@@ -98,11 +98,14 @@ export default function TaskDetailPage({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleEditSubmit = (data: any) => {
     const payload = {
-      ...data,
+      title: data.title,
+      description: data.description,
+      status: data.status,
+      priority: data.priority,
       estimated_hours: data.estimated_hours ? Number(data.estimated_hours) : undefined,
-      actual_hours: data.actual_hours ? Number(data.actual_hours) : undefined,
       start_date: data.start_date ? format(data.start_date, "yyyy-MM-dd") : undefined,
-      due_date: data.due_date ? format(data.due_date, "yyyy-MM-dd") : undefined,
+      end_date: data.end_date ? format(data.end_date, "yyyy-MM-dd") : undefined,
+      due_date: data.end_date ? format(data.end_date, "yyyy-MM-dd") : undefined,
     };
     updateMutation.mutate(payload);
   };
@@ -112,7 +115,7 @@ export default function TaskDetailPage({
       <div className="space-y-6">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
-            <Link href="/tasks">
+            <Link href="/projects">
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
@@ -133,7 +136,7 @@ export default function TaskDetailPage({
       <div className="text-center py-12">
         <p className="text-destructive mb-4">Failed to load task</p>
         <Button asChild>
-          <Link href="/tasks">Back to Tasks</Link>
+          <Link href="/projects">Back to Projects</Link>
         </Button>
       </div>
     );
@@ -146,7 +149,7 @@ export default function TaskDetailPage({
 
   const detailItems = [
     { icon: Calendar, label: "Start Date", value: task.start_date ? format(new Date(task.start_date), "MMM d, yyyy") : null },
-    { icon: Calendar, label: "Due Date", value: task.due_date ? format(new Date(task.due_date), "MMM d, yyyy") : null, isOverdue },
+    { icon: Calendar, label: "End Date", value: (task.end_date || task.due_date) ? format(new Date(task.end_date || task.due_date || ""), "MMM d, yyyy") : null, isOverdue },
     { icon: Clock, label: "Estimated Hours", value: task.estimated_hours ? `${task.estimated_hours}h` : null },
     { icon: Timer, label: "Actual Hours", value: task.actual_hours ? `${task.actual_hours}h` : null },
   ].filter(item => item.value);
@@ -157,7 +160,7 @@ export default function TaskDetailPage({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
-            <Link href="/tasks">
+            <Link href={project ? `/projects/${project.id}` : "/projects"}>
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
