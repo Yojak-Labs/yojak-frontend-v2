@@ -1,24 +1,28 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import Link from "next/link";
 import { format } from "date-fns";
 import {
-  FolderKanban,
-  CheckSquare,
-  Clock,
   AlertTriangle,
   ArrowRight,
+  Calendar,
+  CheckCircle2,
+  Clock,
+  FolderKanban,
+  MapPin,
   Plus,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { projectsApi } from "@/lib/api/projects";
 import { tasksApi } from "@/lib/api/tasks";
-import { StatusBadge, PriorityBadge } from "@/components/ui/status-badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { DashboardSkeleton } from "@/components/ui/skeleton-loader";
 import { EmptyState } from "@/components/ui/empty-state";
+import { getTaskMetrics, sortTasksByExecutionOrder } from "@/components/projects/project-workflow";
 import type { Project, Task } from "@/lib/types";
 
 function StatCard({
@@ -26,190 +30,108 @@ function StatCard({
   value,
   description,
   icon: Icon,
-  trend,
 }: {
   title: string;
   value: string | number;
   description?: string;
   icon: React.ComponentType<{ className?: string }>;
-  trend?: { value: number; isPositive: boolean };
 }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {title}
-        </CardTitle>
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
         <Icon className="h-4 w-4 text-muted-foreground" />
       </CardHeader>
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
-        {description && (
-          <p className="text-xs text-muted-foreground mt-1">{description}</p>
-        )}
-        {trend && (
-          <p
-            className={`text-xs mt-1 ${
-              trend.isPositive ? "text-green-600" : "text-red-600"
-            }`}
-          >
-            {trend.isPositive ? "+" : ""}
-            {trend.value}% from last month
-          </p>
-        )}
+        {description && <p className="mt-1 text-xs text-muted-foreground">{description}</p>}
       </CardContent>
     </Card>
   );
 }
 
-function RecentProjectsCard({
-  projects,
-  isAdmin,
+function ProjectDashboardCard({
+  project,
+  tasks,
 }: {
-  projects: Project[];
-  isAdmin: boolean;
+  project: Project;
+  tasks: Task[];
 }) {
-  if (projects.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Projects</CardTitle>
-          <CardDescription>Your latest construction projects</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <EmptyState
-            icon={FolderKanban}
-            title="No projects yet"
-            description={isAdmin ? "No projects available" : "Create your first project to get started"}
-            action={!isAdmin ? (
-              <Button asChild>
-                <Link href="/projects/new">
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Project
-                </Link>
-              </Button>
-            ) : undefined}
-          />
-        </CardContent>
-      </Card>
-    );
-  }
+  const orderedTasks = sortTasksByExecutionOrder(tasks);
+  const metrics = getTaskMetrics(orderedTasks);
+  const nextTask = orderedTasks.find((task) => task.status !== "completed");
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>Recent Projects</CardTitle>
-          <CardDescription>Your latest construction projects</CardDescription>
-        </div>
-        <Button variant="ghost" size="sm" asChild>
-          <Link href="/projects">
-            View all
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </Button>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {projects.slice(0, 5).map((project) => (
-            <Link
-              key={project.id}
-              href={`/projects/${project.id}`}
-              className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+    <Link href={`/projects/${project.id}`} className="group block">
+      <Card className="h-full transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md">
+        <CardHeader className="space-y-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                 <FolderKanban className="h-5 w-5 text-primary" />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{project.name}</p>
-                <p className="text-xs text-muted-foreground truncate">
-                  {project.location || project.type}
-                </p>
+              <div className="min-w-0">
+                <CardTitle className="truncate text-base">{project.name}</CardTitle>
+                <CardDescription className="truncate capitalize">
+                  {project.location || project.type.replace(/_/g, " ")}
+                </CardDescription>
               </div>
-              <StatusBadge status={project.status} />
-            </Link>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function RecentTasksCard({
-  tasks,
-  isAdmin,
-}: {
-  tasks: Task[];
-  isAdmin: boolean;
-}) {
-  if (tasks.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Tasks</CardTitle>
-          <CardDescription>Tasks that need your attention</CardDescription>
+            </div>
+            <StatusBadge status={project.status} />
+          </div>
+          <div>
+            <div className="mb-2 flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Progress</span>
+              <span className="font-semibold">{metrics.progress}%</span>
+            </div>
+            <Progress value={metrics.progress} />
+          </div>
         </CardHeader>
-        <CardContent>
-          <EmptyState
-            icon={CheckSquare}
-            title="No tasks yet"
-            description={isAdmin ? "No tasks available" : "Tasks will appear here when created"}
-            action={!isAdmin ? (
-              <Button asChild>
-                <Link href="/tasks">
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Task
-                </Link>
-              </Button>
-            ) : undefined}
-          />
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-3 gap-2 text-sm">
+            <div className="rounded-lg border p-3">
+              <p className="text-muted-foreground">Tasks</p>
+              <p className="text-lg font-bold">{metrics.total}</p>
+            </div>
+            <div className="rounded-lg border p-3">
+              <p className="text-muted-foreground">Done</p>
+              <p className="text-lg font-bold">{metrics.completed}</p>
+            </div>
+            <div className="rounded-lg border p-3">
+              <p className="text-muted-foreground">Blocked</p>
+              <p className="text-lg font-bold">{metrics.blocked}</p>
+            </div>
+          </div>
+
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              <span>
+                {project.start_date ? format(new Date(project.start_date), "MMM d, yyyy") : "No start"}
+                {" - "}
+                {project.end_date ? format(new Date(project.end_date), "MMM d, yyyy") : "No end"}
+              </span>
+            </div>
+            {project.location && (
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4" />
+                <span className="truncate">{project.location}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center justify-between border-t pt-3 text-sm">
+            <div className="min-w-0">
+              <p className="font-medium">Next in workflow</p>
+              <p className="truncate text-muted-foreground">
+                {nextTask ? `#${nextTask.execution_order ?? "-"} ${nextTask.title}` : "Workflow complete"}
+              </p>
+            </div>
+            <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1" />
+          </div>
         </CardContent>
       </Card>
-    );
-  }
-
-  return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>Recent Tasks</CardTitle>
-          <CardDescription>Tasks that need your attention</CardDescription>
-        </div>
-        <Button variant="ghost" size="sm" asChild>
-          <Link href="/tasks">
-            View all
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </Button>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {tasks.slice(0, 5).map((task) => (
-            <Link
-              key={task.id}
-              href={`/tasks/${task.id}`}
-              className="flex items-center gap-4 p-3 rounded-lg hover:bg-muted/50 transition-colors"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                <CheckSquare className="h-5 w-5 text-primary" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{task.title}</p>
-                <p className="text-xs text-muted-foreground">
-                  {task.due_date
-                    ? `Due ${format(new Date(task.due_date), "MMM d, yyyy")}`
-                    : "No due date"}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <PriorityBadge priority={task.priority} />
-                <StatusBadge status={task.status} />
-              </div>
-            </Link>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+    </Link>
   );
 }
 
@@ -222,50 +144,57 @@ export default function DashboardPage() {
     queryFn: () => (isAdmin ? projectsApi.getAllAdmin() : projectsApi.getAll()),
   });
 
-  const { data: tasksData, isLoading: tasksLoading } = useQuery({
-    queryKey: ["tasks"],
-    queryFn: () => tasksApi.getAll(),
+  const projects = Array.isArray(projectsData?.data) ? projectsData.data : [];
+  const taskQueries = useQueries({
+    queries: projects.map((project) => ({
+      queryKey: ["project-tasks", project.id],
+      queryFn: () => tasksApi.getByProject(project.id),
+      enabled: !!project.id,
+    })),
   });
 
-  const isLoading = projectsLoading || tasksLoading;
+  const taskMap = new Map(
+    projects.map((project, index) => {
+      const apiTasks = taskQueries[index]?.data?.data;
+      const preloadedTasks = Array.isArray(project.tasks) ? project.tasks : [];
+      const tasks = sortTasksByExecutionOrder(Array.isArray(apiTasks) ? apiTasks : preloadedTasks).filter(
+        (task) => task.project_id === project.id
+      );
+      return [project.id, tasks];
+    })
+  );
 
-  if (isLoading) {
+  const allProjectTasks = Array.from(taskMap.values()).flat();
+  const totalProjects = projects.length;
+  const activeProjects = projects.filter((project) => project.status === "in_progress").length;
+  const completedTasks = allProjectTasks.filter((task) => task.status === "completed").length;
+  const blockedTasks = allProjectTasks.filter((task) => task.status === "blocked").length;
+
+  if (projectsLoading) {
     return <DashboardSkeleton />;
   }
 
-  const projects = Array.isArray(projectsData?.data) ? projectsData.data : [];
-  const visibleProjects = projects;
-  const tasks = Array.isArray(tasksData?.data) ? tasksData.data : [];
-  const visibleProjectIds = new Set(visibleProjects.map((project) => project.id));
-  const visibleTasks = isAdmin
-    ? tasks
-    : tasks.filter((task) => visibleProjectIds.has(task.project_id));
-
-  // Compute statistics
-  const totalProjects = visibleProjects.length;
-  const activeProjects = visibleProjects.filter((p) => p.status === "in_progress").length;
-  const totalTasks = visibleTasks.length;
-  const activeTasks = visibleTasks.filter(
-    (t) => t.status === "in_progress" || t.status === "pending"
-  ).length;
-  const overdueTasks = visibleTasks.filter((t) => {
-    if (!t.due_date || t.status === "completed") return false;
-    return new Date(t.due_date) < new Date();
-  }).length;
-
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">
-          Welcome back, {user?.name?.split(" ")[0] || "there"}
-        </h1>
-        <p className="text-muted-foreground">
-          Here&apos;s an overview of your construction projects
-        </p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Welcome back, {user?.name?.split(" ")[0] || "there"}
+          </h1>
+          <p className="text-muted-foreground">
+            Select a project to open its execution workspace, timeline, and scoped tasks.
+          </p>
+        </div>
+        {!isAdmin && (
+          <Button asChild>
+            <Link href="/projects/new">
+              <Plus className="mr-2 h-4 w-4" />
+              New Project
+            </Link>
+          </Button>
+        )}
       </div>
 
-      {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Projects"
@@ -274,30 +203,56 @@ export default function DashboardPage() {
           icon={FolderKanban}
         />
         <StatCard
-          title="Active Tasks"
-          value={activeTasks}
-          description={`${totalTasks} total`}
-          icon={CheckSquare}
+          title="Completed Tasks"
+          value={completedTasks}
+          description="Across visible project workspaces"
+          icon={CheckCircle2}
         />
         <StatCard
           title="In Progress"
           value={activeProjects}
-          description="Projects being worked on"
+          description="Projects being executed"
           icon={Clock}
         />
         <StatCard
-          title="Overdue Tasks"
-          value={overdueTasks}
-          description={overdueTasks > 0 ? "Needs attention" : "All on track"}
+          title="Blocked Tasks"
+          value={blockedTasks}
+          description={blockedTasks > 0 ? "Dependency attention needed" : "No blockers reported"}
           icon={AlertTriangle}
         />
       </div>
 
-      {/* Content Grid */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <RecentProjectsCard projects={visibleProjects} isAdmin={isAdmin} />
-        <RecentTasksCard tasks={visibleTasks} isAdmin={isAdmin} />
-      </div>
+      {projects.length === 0 ? (
+        <Card>
+          <CardContent className="py-0">
+            <EmptyState
+              icon={FolderKanban}
+              title="No projects yet"
+              description={isAdmin ? "No projects available" : "Create your first project to get started"}
+              action={
+                !isAdmin ? (
+                  <Button asChild>
+                    <Link href="/projects/new">
+                      <Plus className="mr-2 h-4 w-4" />
+                      New Project
+                    </Link>
+                  </Button>
+                ) : undefined
+              }
+            />
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {projects.map((project) => (
+            <ProjectDashboardCard
+              key={project.id}
+              project={project}
+              tasks={taskMap.get(project.id) || []}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
