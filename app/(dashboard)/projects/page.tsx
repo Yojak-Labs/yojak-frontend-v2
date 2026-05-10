@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import {
   Plus,
@@ -35,10 +36,12 @@ import {
 import { projectsApi } from "@/lib/api/projects";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Progress } from "@/components/ui/progress";
 import { TableSkeleton } from "@/components/ui/skeleton-loader";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { toast } from "@/components/ui/sonner";
+import { getTaskMetrics, sortTasksByExecutionOrder } from "@/components/projects/project-workflow";
 import type { Project, ProjectStatus } from "@/lib/types";
 
 const statusOptions: { value: ProjectStatus | "all"; label: string }[] = [
@@ -51,8 +54,23 @@ const statusOptions: { value: ProjectStatus | "all"; label: string }[] = [
 ];
 
 function ProjectCard({ project, onDelete }: { project: Project; onDelete: (id: string) => void }) {
+  const router = useRouter();
+  const tasks = sortTasksByExecutionOrder(Array.isArray(project.tasks) ? project.tasks : []);
+  const metrics = getTaskMetrics(tasks);
+
   return (
-    <Card className="group relative overflow-hidden transition-all duration-300 hover:scale-[1.01] hover:border-indigo-300/40">
+    <Card
+      role="link"
+      tabIndex={0}
+      onClick={() => router.push(`/projects/${project.id}`)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          router.push(`/projects/${project.id}`);
+        }
+      }}
+      className="group relative cursor-pointer overflow-hidden transition-all duration-300 hover:scale-[1.01] hover:border-indigo-300/40"
+    >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-20 bg-gradient-to-r from-indigo-500/15 to-purple-500/10 opacity-60" />
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
@@ -76,7 +94,12 @@ function ProjectCard({ project, onDelete }: { project: Project; onDelete: (id: s
           </div>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="h-8 w-8">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={(event) => event.stopPropagation()}
+              >
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -134,6 +157,17 @@ function ProjectCard({ project, onDelete }: { project: Project; onDelete: (id: s
               Started {format(new Date(project.start_date), "MMM d, yyyy")}
             </span>
           )}
+        </div>
+        <div className="space-y-2 pt-1">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Progress</span>
+            <span className="font-medium">{metrics.progress}%</span>
+          </div>
+          <Progress value={metrics.progress} />
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>{metrics.total} tasks</span>
+            <span>{metrics.completed} completed</span>
+          </div>
         </div>
       </CardContent>
     </Card>
