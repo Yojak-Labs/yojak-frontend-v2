@@ -34,9 +34,11 @@ const statusLabels: Record<string, string> = {
 };
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
-  const colorClass = statusColors[status] || statusColors.pending;
+  const normalizedStatus = typeof status === "string" ? status.trim().toLowerCase() : "";
+  const colorClass = statusColors[normalizedStatus] || statusColors.pending;
   const label =
-    statusLabels[status] || (typeof status === "string" ? status.replace(/_/g, " ") : "Unknown");
+    statusLabels[normalizedStatus] ||
+    (normalizedStatus ? normalizedStatus.replace(/_/g, " ") : "Pending");
 
   return (
     <span
