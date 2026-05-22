@@ -16,6 +16,7 @@ import {
   Calendar,
   MoreHorizontal,
   ClipboardList,
+  Sparkles,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -195,6 +196,12 @@ export default function ProjectDetailPage({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button asChild>
+            <Link href={`/projects/${id}/generation`}>
+              <Sparkles className="mr-2 h-4 w-4" />
+              Generation Workspace
+            </Link>
+          </Button>
           <Button variant="outline" asChild>
             <Link href={`/projects/${id}/edit`}>
               <Pencil className="mr-2 h-4 w-4" />

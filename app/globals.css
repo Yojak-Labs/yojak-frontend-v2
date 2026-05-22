@@ -195,6 +195,32 @@
     animation: stripeMove 3s linear infinite;
   }
 
+  .enter-fade-up {
+    animation: fadeInUp 420ms ease-out both;
+  }
+
+  .enter-fade {
+    animation: fadeIn 360ms ease-out both;
+  }
+
+  .stage-active-glow {
+    animation: stageGlow 2.2s ease-in-out infinite;
+  }
+
+  .pipeline-track {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .pipeline-track::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(90deg, transparent, rgba(59, 130, 246, 0.2), transparent);
+    animation: trackSweep 2.8s linear infinite;
+  }
+
   .dark .glass-panel {
     @apply border-white/15 bg-white/5;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
@@ -218,5 +244,41 @@
   }
   to {
     background-position: 220% 50%;
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes stageGlow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.45), 0 0 20px rgba(59, 130, 246, 0.18);
+  }
+}
+
+@keyframes trackSweep {
+  100% {
+    transform: translateX(100%);
   }
 }
