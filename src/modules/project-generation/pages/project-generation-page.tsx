@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, ClipboardList } from "lucide-react";
+import { ArrowLeft, ClipboardList, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { ProjectExecutionTimeline } from "@/components/projects/project-workflow";
 import { PipelineProgress } from "../components/pipeline-progress";
+import { GenerationTasksSection } from "../components/generation-tasks-section";
 import { GanttView } from "../components/gantt-view";
 import { RiskSection } from "../components/risk-section";
 import { MaterialsSection } from "../components/materials-section";
@@ -25,7 +25,13 @@ const RevealSection = ({
   </div>
 );
 
-export function ProjectGenerationPage({ projectId }: { projectId: string }) {
+export function ProjectGenerationPage({
+  projectId,
+  autoStart = false,
+}: {
+  projectId: string;
+  autoStart?: boolean;
+}) {
   const {
     projectQuery,
     tasksQuery,
@@ -37,7 +43,12 @@ export function ProjectGenerationPage({ projectId }: { projectId: string }) {
     runError,
     riskReport,
     materialReport,
-  } = useProjectGeneration(projectId);
+    isRunning,
+    startGeneration,
+    hasStarted,
+    updateTaskStatus,
+    updatingTaskId,
+  } = useProjectGeneration(projectId, { autoStart });
 
   const project = projectQuery.data?.data;
   return (
@@ -57,26 +68,62 @@ export function ProjectGenerationPage({ projectId }: { projectId: string }) {
             Live orchestration for planner, scheduling, risk, materials, and diagram outputs.
           </p>
         </div>
-        <div className="rounded-md bg-primary/10 px-3 py-1.5 text-xs text-primary">
-          Auto-generation enabled
+        <div className="flex flex-wrap items-center gap-2">
+          {!hasStarted && !isRunning ? (
+            <Button size="sm" className="h-8 text-xs" onClick={startGeneration} disabled={isRunning}>
+              <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+              Start generation
+            </Button>
+          ) : (
+            <div className="rounded-md bg-primary/10 px-3 py-1.5 text-xs text-primary">
+              {isRunning ? "Generation in progress" : "Generation started"}
+            </div>
+          )}
         </div>
       </div>
 
-      <PipelineProgress stages={stages} completion={completion} />
+      {!hasStarted && !isRunning ? (
+        <Card className="enter-fade-up">
+          <CardContent className="py-6">
+            <EmptyState
+              icon={Sparkles}
+              title="Generation not started"
+              description="Run the AI orchestration pipeline when you are ready. This will execute planner, scheduling, risk, material, and diagram agents for this project."
+              action={
+                <Button size="sm" className="text-xs" onClick={startGeneration}>
+                  <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                  Start generation
+                </Button>
+              }
+            />
+          </CardContent>
+        </Card>
+      ) : (
+        <PipelineProgress stages={stages} completion={completion} />
+      )}
 
       {runError ? (
         <Card className="enter-fade-up">
           <CardContent className="py-4">
             <p className="text-xs text-destructive">{runError}</p>
+            {!isRunning ? (
+              <Button size="sm" className="mt-3 text-xs" onClick={startGeneration}>
+                Retry generation
+              </Button>
+            ) : null}
           </CardContent>
         </Card>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-3">
-        <div className="space-y-4 xl:col-span-2">
+      {hasStarted || isRunning ? (
+        <div className="space-y-4">
           {tasks.length ? (
             <RevealSection delay={40}>
-              <ProjectExecutionTimeline tasks={tasks} />
+              <GenerationTasksSection
+                tasks={tasks}
+                onStatusChange={updateTaskStatus}
+                updatingTaskId={updatingTaskId}
+              />
             </RevealSection>
           ) : (
             <RevealSection delay={40}>
@@ -89,9 +136,13 @@ export function ProjectGenerationPage({ projectId }: { projectId: string }) {
                 </CardHeader>
                 <CardContent className="py-0">
                   <EmptyState
-                  icon={ClipboardList}
+                    icon={ClipboardList}
                     title="No generated tasks yet"
-                  description="Agent workflow is running and tasks will appear automatically."
+                    description={
+                      isRunning
+                        ? "Agent workflow is running and tasks will appear automatically."
+                        : "Start generation to create planner tasks for this project."
+                    }
                   />
                 </CardContent>
               </Card>
@@ -100,28 +151,29 @@ export function ProjectGenerationPage({ projectId }: { projectId: string }) {
 
           {orchestrationData?.schedule ? (
             <RevealSection delay={90}>
-              <GanttView schedule={orchestrationData.schedule} />
+              <GanttView schedule={orchestrationData.schedule} tasks={tasks} />
             </RevealSection>
           ) : null}
+
           {riskReport ? (
             <RevealSection delay={130}>
               <RiskSection report={riskReport} />
             </RevealSection>
           ) : null}
+
           {materialReport ? (
             <RevealSection delay={170}>
               <MaterialsSection report={materialReport} />
             </RevealSection>
           ) : null}
-        </div>
 
-        <div className="space-y-4">
           {orchestrationData?.diagram ? (
-            <RevealSection delay={120}>
+            <RevealSection delay={210}>
               <DiagramSection diagram={orchestrationData.diagram} />
             </RevealSection>
           ) : null}
-          <RevealSection delay={180}>
+
+          <RevealSection delay={240}>
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm">Generation status</CardTitle>
@@ -134,13 +186,14 @@ export function ProjectGenerationPage({ projectId }: { projectId: string }) {
                   Tasks query: {tasksQuery.isFetching ? "refreshing" : "idle"}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  Orchestration: {orchestrationData?.orchestration_ok ? "completed" : runTriggered ? "running" : "not started"}
+                  Orchestration:{" "}
+                  {orchestrationData?.orchestration_ok ? "completed" : runTriggered ? "running" : "not started"}
                 </p>
               </CardContent>
             </Card>
           </RevealSection>
         </div>
-      </div>
+      ) : null}
     </div>
   );
 }
