@@ -14,7 +14,8 @@ const statusColors: Record<string, string> = {
   on_hold: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
   cancelled: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
   // Task statuses
-  pending: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
+  todo: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400",
+  done: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
   blocked: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400",
   // Generic
   active: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
@@ -28,6 +29,8 @@ const statusLabels: Record<string, string> = {
   on_hold: "On Hold",
   cancelled: "Cancelled",
   pending: "Pending",
+  todo: "To Do",
+  done: "Done",
   blocked: "Blocked",
   active: "Active",
   inactive: "Inactive",
@@ -35,7 +38,7 @@ const statusLabels: Record<string, string> = {
 
 export function StatusBadge({ status, className }: StatusBadgeProps) {
   const normalizedStatus = typeof status === "string" ? status.trim().toLowerCase() : "";
-  const colorClass = statusColors[normalizedStatus] || statusColors.pending;
+  const colorClass = statusColors[normalizedStatus] || statusColors.todo;
   const label =
     statusLabels[normalizedStatus] ||
     (normalizedStatus ? normalizedStatus.replace(/_/g, " ") : "Pending");
