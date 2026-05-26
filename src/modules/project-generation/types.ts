@@ -28,24 +28,27 @@ export interface PlannerResponse {
 export interface ScheduledTask {
   id: string;
   title: string;
+  status?: string;
+  priority?: string;
   execution_order: number;
-  earliest_start: number;
-  earliest_finish: number;
+  start_offset: number;
+  end_offset: number;
   dependencies?: string[];
-  is_critical_path: boolean;
 }
 
 export interface ScheduleExecutionStage {
   stage: number;
   task_ids: string[];
+  titles?: string[];
 }
 
 export interface ScheduleResponse {
   project_id: string;
   tasks: ScheduledTask[];
+  topological_order?: string[];
   execution_stages: ScheduleExecutionStage[];
   critical_path: string[];
-  total_duration: number;
+  total_projected_duration: number;
 }
 
 export interface RiskTaskAnalysis {
@@ -98,6 +101,7 @@ export interface DiagramDownloadUrls {
 export interface DiagramResult {
   layout_json?: unknown;
   svg?: string;
+  image_url?: string;
   download_urls?: DiagramDownloadUrls;
 }
 
