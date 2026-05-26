@@ -7,7 +7,7 @@ const normalizeBaseUrl = (value: string) => {
 };
 
 const API_BASE_URL = normalizeBaseUrl(
-  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "https://yojak-backend.onrender.com/v1/yojakai"
+  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "http://localhost:8080/v1/yojakai"
 );
 
 // Create axios instance
