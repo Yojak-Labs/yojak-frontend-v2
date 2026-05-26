@@ -59,7 +59,7 @@ function ProjectDashboardCard({
 }) {
   const orderedTasks = sortTasksByExecutionOrder(tasks);
   const metrics = getTaskMetrics(orderedTasks);
-  const nextTask = orderedTasks.find((task) => task.status !== "completed");
+  const nextTask = orderedTasks.find((task) => task.status !== "done");
 
   return (
     <Link href={`/projects/${project.id}`} className="group block">
@@ -167,7 +167,7 @@ export default function DashboardPage() {
   const allProjectTasks = Array.from(taskMap.values()).flat();
   const totalProjects = projects.length;
   const activeProjects = projects.filter((project) => project.status === "in_progress").length;
-  const completedTasks = allProjectTasks.filter((task) => task.status === "completed").length;
+  const completedTasks = allProjectTasks.filter((task) => task.status === "done").length;
   const blockedTasks = allProjectTasks.filter((task) => task.status === "blocked").length;
 
   if (projectsLoading) {
