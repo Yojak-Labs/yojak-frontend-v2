@@ -1,6 +1,14 @@
 import { apiClient, unwrapApiData } from "./client";
 import type { Task, CreateTaskPayload, UpdateTaskPayload, ApiResponse, TaskStatus } from "../types";
 
+/**
+ * Backend task list API:
+ *   GET /v1/yojakai/tasks
+ * Query params (optional):
+ *   - projectId: filter by project UUID
+ *   - status: todo | in_progress | done | blocked
+ * Auth: Bearer JWT (user role)
+ */
 const sortByExecutionOrder = (tasks: Task[]) =>
   [...tasks].sort((a, b) => {
     const left = a.execution_order ?? Number.MAX_SAFE_INTEGER;
@@ -38,10 +46,13 @@ export const tasksApi = {
       const params: Record<string, string> = {};
       if (filters?.status) params.status = filters.status;
       if (filters?.projectId) params.projectId = filters.projectId;
-      
+
       const response = await apiClient.get("/tasks", { params });
-      const tasks = unwrapApiData<Task[]>(response.data);
-      return { success: true, data: filters?.projectId ? sortByExecutionOrder(tasks) : tasks };
+      const tasks = unwrapApiData<Task[]>(response.data) ?? [];
+      return {
+        success: true,
+        data: filters?.projectId ? sortByExecutionOrder(tasks) : tasks,
+      };
     } catch (error: unknown) {
       const err = error as { response?: { data?: { message?: string } } };
       return {
@@ -51,19 +62,8 @@ export const tasksApi = {
     }
   },
 
-  getByProject: async (projectId: string): Promise<ApiResponse<Task[]>> => {
-    try {
-      const response = await apiClient.get(`/projects/${projectId}/tasks`, {
-        params: { orderBy: "execution_order", order: "asc" },
-      });
-      return { success: true, data: sortByExecutionOrder(unwrapApiData<Task[]>(response.data)) };
-    } catch (error: unknown) {
-      const err = error as { response?: { data?: { message?: string } } };
-      return {
-        success: false,
-        error: err.response?.data?.message || "Failed to fetch project tasks",
-      };
-    }
+  getByProject: async (projectId: string, status?: TaskStatus): Promise<ApiResponse<Task[]>> => {
+    return tasksApi.getAll({ projectId, status });
   },
 
   getById: async (id: string): Promise<ApiResponse<Task>> => {
