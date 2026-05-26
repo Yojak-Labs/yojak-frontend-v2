@@ -31,7 +31,7 @@ export const sortTasksByExecutionOrder = (tasks: Task[]) =>
 
 export const getTaskMetrics = (tasks: Task[]) => {
   const total = tasks.length;
-  const completed = tasks.filter((task) => task.status === "completed").length;
+  const completed = tasks.filter((task) => task.status === "done").length;
   const inProgress = tasks.filter((task) => task.status === "in_progress").length;
   const blocked = tasks.filter((task) => task.status === "blocked").length;
   const progress = total ? Math.round((completed / total) * 100) : 0;
@@ -40,14 +40,14 @@ export const getTaskMetrics = (tasks: Task[]) => {
 };
 
 const statusColumns: { status: TaskStatus; label: string }[] = [
-  { status: "pending", label: "Upcoming" },
+  { status: "todo", label: "To Do" },
   { status: "in_progress", label: "In Progress" },
   { status: "blocked", label: "Blocked" },
-  { status: "completed", label: "Completed" },
+  { status: "done", label: "Done" },
 ];
 
 const statusStyles: Record<TaskStatus, { icon: typeof Circle; className: string; rail: string }> = {
-  completed: {
+  done: {
     icon: CheckCircle2,
     className: "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
     rail: "bg-emerald-500",
@@ -62,7 +62,7 @@ const statusStyles: Record<TaskStatus, { icon: typeof Circle; className: string;
     className: "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300",
     rail: "bg-red-500",
   },
-  pending: {
+  todo: {
     icon: Circle,
     className: "border-muted bg-muted/50 text-muted-foreground",
     rail: "bg-muted-foreground/40",
@@ -84,7 +84,7 @@ const groupByExecutionOrder = (tasks: Task[]) => {
 
 const dependenciesAreComplete = (task: Task, tasksById: Map<string, Task>) => {
   if (!task.dependencies?.length) return true;
-  return task.dependencies.every((dependencyId) => tasksById.get(dependencyId)?.status === "completed");
+  return task.dependencies.every((dependencyId) => tasksById.get(dependencyId)?.status === "done");
 };
 
 function WorkflowTaskCard({
@@ -126,10 +126,16 @@ function WorkflowTaskCard({
             {task.estimated_hours}h
           </Badge>
         ) : null}
+        {task.start_date ? (
+          <Badge variant="outline" className="gap-1">
+            <Calendar className="h-3 w-3" />
+            Start {format(new Date(task.start_date), "MMM d")}
+          </Badge>
+        ) : null}
         {endDate ? (
           <Badge variant="outline" className="gap-1">
             <Calendar className="h-3 w-3" />
-            {format(new Date(endDate), "MMM d")}
+            End {format(new Date(endDate), "MMM d")}
           </Badge>
         ) : null}
         {task.dependencies?.length ? (
