@@ -1,6 +1,7 @@
 "use client";
 
 import { use } from "react";
+import { useSearchParams } from "next/navigation";
 import { ProjectGenerationPage } from "@/src/modules/project-generation/pages/project-generation-page";
 
 export default function ProjectGenerationWorkspacePage({
@@ -9,5 +10,8 @@ export default function ProjectGenerationWorkspacePage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  return <ProjectGenerationPage projectId={id} />;
+  const searchParams = useSearchParams();
+  const autoStart = searchParams.get("start") === "1";
+
+  return <ProjectGenerationPage projectId={id} autoStart={autoStart} />;
 }
