@@ -101,9 +101,9 @@ export interface CreateProjectPayload {
   status?: ProjectStatus;
 }
 
-// Task types
-export type TaskStatus = "pending" | "in_progress" | "completed" | "blocked";
-export type TaskPriority = "low" | "medium" | "high" | "urgent";
+// Task types — aligned with backend models.Task / TaskResponse
+export type TaskStatus = "todo" | "in_progress" | "done" | "blocked";
+export type TaskPriority = "low" | "medium" | "high";
 
 export interface Task {
   id: string;
