@@ -29,8 +29,8 @@ const taskSchema = z.object({
   project_id: z.string().min(1, "Project is required"),
   title: z.string().min(1, "Task title is required"),
   description: z.string().optional(),
-  status: z.enum(["pending", "in_progress", "completed", "blocked"]),
-  priority: z.enum(["low", "medium", "high", "urgent"]),
+  status: z.enum(["todo", "in_progress", "done", "blocked"]),
+  priority: z.enum(["low", "medium", "high"]),
   start_date: z.date().optional(),
   end_date: z.date().optional(),
   estimated_hours: z.coerce.number().positive().optional().or(z.literal("")),
@@ -48,9 +48,9 @@ interface TaskFormProps {
 }
 
 const taskStatuses: { value: TaskStatus; label: string }[] = [
-  { value: "pending", label: "Pending" },
+  { value: "todo", label: "To Do" },
   { value: "in_progress", label: "In Progress" },
-  { value: "completed", label: "Completed" },
+  { value: "done", label: "Done" },
   { value: "blocked", label: "Blocked" },
 ];
 
@@ -58,7 +58,6 @@ const taskPriorities: { value: TaskPriority; label: string }[] = [
   { value: "low", label: "Low" },
   { value: "medium", label: "Medium" },
   { value: "high", label: "High" },
-  { value: "urgent", label: "Urgent" },
 ];
 
 export function TaskForm({
@@ -81,7 +80,7 @@ export function TaskForm({
       project_id: task?.project_id || defaultProjectId || "",
       title: task?.title || "",
       description: task?.description || "",
-      status: task?.status || "pending",
+      status: task?.status || "todo",
       priority: task?.priority || "medium",
       start_date: task?.start_date ? new Date(task.start_date) : undefined,
       end_date: (task?.end_date || task?.due_date) ? new Date(task.end_date || task.due_date || "") : undefined,
