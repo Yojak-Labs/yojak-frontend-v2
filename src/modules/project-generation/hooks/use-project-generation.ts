@@ -4,6 +4,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { projectsApi } from "@/lib/api/projects";
 import { tasksApi } from "@/lib/api/tasks";
+import { canUpdateTaskStatus } from "@/lib/tasks/task-dependencies";
+import { toast } from "@/components/ui/sonner";
+import type { TaskStatus } from "@/lib/types";
 import { projectGenerationApi, asErrorMessage } from "../api";
 import type {
   MaterialCostReportData,
@@ -65,10 +68,11 @@ const getStageState = (index: number, completionIndex: number, failed: boolean):
   return "pending";
 };
 
-export function useProjectGeneration(projectId: string) {
+export function useProjectGeneration(projectId: string, options?: { autoStart?: boolean }) {
   const queryClient = useQueryClient();
-  const [runTriggered, setRunTriggered] = useState(true);
+  const [runTriggered, setRunTriggered] = useState(false);
   const [runError, setRunError] = useState<string | null>(null);
+  const autoStartAttemptedRef = useRef(false);
   const [orchestrationData, setOrchestrationData] = useState<OrchestrationPayload | null>(() => {
     if (typeof window === "undefined") return null;
     const raw = window.sessionStorage.getItem(`project-generation:${projectId}`);
@@ -79,7 +83,7 @@ export function useProjectGeneration(projectId: string) {
       return null;
     }
   });
-  const autoStartedRef = useRef(false);
+  const hasCachedOrchestration = Boolean(orchestrationData);
 
   const projectQuery = useQuery({
     queryKey: ["project", projectId],
@@ -125,11 +129,39 @@ export function useProjectGeneration(projectId: string) {
     },
   });
 
-  useEffect(() => {
-    if (orchestrationData || runMutation.isPending || autoStartedRef.current) return;
-    autoStartedRef.current = true;
+  const updateTaskStatusMutation = useMutation({
+    mutationFn: async ({ taskId, status }: { taskId: string; status: TaskStatus }) => {
+      const response = await tasksApi.update(taskId, { status });
+      if (!response.success) {
+        throw new Error(response.error || "Failed to update task status");
+      }
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["project-tasks", projectId] });
+      toast.success("Task status updated");
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || "Failed to update task status");
+    },
+  });
+
+  const startGeneration = () => {
+    if (runMutation.isPending) return;
     runMutation.mutate();
-  }, [orchestrationData, runMutation]);
+  };
+
+  useEffect(() => {
+    if (hasCachedOrchestration) {
+      setRunTriggered(true);
+    }
+  }, [hasCachedOrchestration]);
+
+  useEffect(() => {
+    if (!options?.autoStart || autoStartAttemptedRef.current || hasCachedOrchestration) return;
+    autoStartAttemptedRef.current = true;
+    runMutation.mutate();
+  }, [options?.autoStart, hasCachedOrchestration, runMutation]);
 
   useEffect(() => {
     if (!orchestrationData || typeof window === "undefined") return;
@@ -137,6 +169,22 @@ export function useProjectGeneration(projectId: string) {
   }, [orchestrationData, projectId]);
 
   const tasks = tasksQuery.data?.data || [];
+  const tasksById = useMemo(
+    () => new Map(tasks.map((task) => [task.id, task])),
+    [tasks]
+  );
+
+  const updateTaskStatus = (taskId: string, status: TaskStatus) => {
+    const task = tasksById.get(taskId);
+    if (!task) return;
+
+    if (!canUpdateTaskStatus(task, status, tasksById)) {
+      toast.error("Complete prerequisite tasks before updating to In Progress or Done.");
+      return;
+    }
+
+    updateTaskStatusMutation.mutate({ taskId, status });
+  };
 
   const riskReport = useMemo((): RiskReport | null => {
     if (orchestrationData?.risk_report) return orchestrationData.risk_report;
@@ -188,5 +236,11 @@ export function useProjectGeneration(projectId: string) {
     materialReport,
     isRunning: runMutation.isPending,
     tasks,
+    updateTaskStatus,
+    updatingTaskId: updateTaskStatusMutation.isPending
+      ? updateTaskStatusMutation.variables?.taskId ?? null
+      : null,
+    startGeneration,
+    hasStarted: runTriggered || hasCachedOrchestration,
   };
 }
