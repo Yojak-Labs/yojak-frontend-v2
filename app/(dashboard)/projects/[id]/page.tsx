@@ -196,11 +196,9 @@ export default function ProjectDetailPage({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button asChild>
-            <Link href={`/projects/${id}/generation`}>
-              <Sparkles className="mr-2 h-4 w-4" />
-              Generation Workspace
-            </Link>
+          <Button onClick={() => router.push(`/projects/${id}/generation?start=1`)}>
+            <Sparkles className="mr-2 h-4 w-4" />
+            Generation Workspace
           </Button>
           <Button variant="outline" asChild>
             <Link href={`/projects/${id}/edit`}>
