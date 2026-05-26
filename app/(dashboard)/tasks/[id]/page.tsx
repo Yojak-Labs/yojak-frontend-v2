@@ -145,7 +145,7 @@ export default function TaskDetailPage({
   const task = taskData.data;
   const project = projectData?.data;
   const projects = projectsData?.data || [];
-  const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== "completed";
+  const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.status !== "done";
 
   const detailItems = [
     { icon: Calendar, label: "Start Date", value: task.start_date ? format(new Date(task.start_date), "MMM d, yyyy") : null },
