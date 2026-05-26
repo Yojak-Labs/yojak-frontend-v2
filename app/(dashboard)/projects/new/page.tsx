@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { ProjectForm } from "@/components/projects/project-form";
 import { projectsApi } from "@/lib/api/projects";
-import { projectGenerationApi } from "@/src/modules/project-generation/api";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { toast } from "@/components/ui/sonner";
 
@@ -31,24 +30,12 @@ export default function NewProjectPage() {
 
   const createMutation = useMutation({
     mutationFn: projectsApi.create,
-    onSuccess: async (response) => {
+    onSuccess: (response) => {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       const createdProject = response.data;
       const projectId = createdProject?.id;
-      if (!projectId) {
-        toast.success("Project created successfully");
-        router.push("/projects");
-        return;
-      }
-
-      toast.success("Project created. Starting AI generation...");
-      try {
-        await projectGenerationApi.runAgent(projectId);
-      } catch {
-        toast.error("Project created but generation failed to start. You can retry from workspace.");
-      } finally {
-        router.push(`/projects/${projectId}/generation`);
-      }
+      toast.success("Project created successfully");
+      router.push(projectId ? `/projects/${projectId}` : "/projects");
     },
     onError: (error: { message?: string }) => {
       toast.error(error.message || "Failed to create project");
