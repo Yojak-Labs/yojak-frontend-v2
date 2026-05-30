@@ -1,5 +1,6 @@
 import { apiClient, unwrapApiData } from "@/lib/api/client";
 import type {
+  DiagramStructuredDataEnvelope,
   MaterialCostRecord,
   OrchestrationPayload,
   ProjectRunAgentResponse,
@@ -98,6 +99,11 @@ export const projectGenerationApi = {
   getMaterialReports: async (projectId: string): Promise<MaterialCostRecord[]> => {
     const response = await apiClient.get("/material-cost-reports", { params: { project_id: projectId } });
     return extractEnvelopeData<unknown>(response.data).map(normalizeMaterialRecord);
+  },
+
+  getDiagramStructured: async (diagramId: string): Promise<DiagramStructuredDataEnvelope> => {
+    const response = await apiClient.get(`/diagrams/${diagramId}/structured`);
+    return unwrapApiData<DiagramStructuredDataEnvelope>(response.data);
   },
 };
 

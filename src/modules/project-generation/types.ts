@@ -96,12 +96,21 @@ export interface DiagramDownloadUrls {
   svg?: string;
   png?: string;
   pdf?: string;
+  json?: string;
+}
+
+export interface DiagramStructuredDataEnvelope {
+  schema_version?: string;
+  diagram_id?: string;
+  data?: Record<string, unknown>;
 }
 
 export interface DiagramResult {
   layout_json?: unknown;
   svg?: string;
   image_url?: string;
+  structured_data_url?: string;
+  structured_intelligence?: Record<string, unknown>;
   download_urls?: DiagramDownloadUrls;
 }
 
