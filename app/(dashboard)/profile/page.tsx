@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuthStore } from "@/lib/stores/auth-store";
 import { usersApi } from "@/lib/api/users";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Loader2,
+  KeyRound,
   Building2,
   GraduationCap,
 } from "lucide-react";
@@ -39,6 +40,7 @@ export default function ProfilePage() {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState("profile");
   const [profileSuccess, setProfileSuccess] = useState(false);
+  const [openAIKeyInput, setOpenAIKeyInput] = useState("");
   const isAdmin = user?.role === "admin";
   const userRecord = (user ?? {}) as Record<string, unknown>;
 
@@ -113,6 +115,28 @@ export default function ProfilePage() {
     },
     onError: () => {
       toast.error("Failed to update profile");
+    },
+  });
+
+  const openAIKeyStatusQuery = useQuery({
+    queryKey: ["openai-key-status"],
+    queryFn: usersApi.getOpenAIKeyStatus,
+    enabled: !!user && !isAdmin,
+  });
+
+  const saveOpenAIKeyMutation = useMutation({
+    mutationFn: (apiKey: string) => usersApi.setOpenAIKey(apiKey),
+    onSuccess: (response) => {
+      if (response.success) {
+        toast.success("OpenAI API key saved");
+        setOpenAIKeyInput("");
+        queryClient.invalidateQueries({ queryKey: ["openai-key-status"] });
+      } else {
+        toast.error(response.error || "Failed to save OpenAI API key");
+      }
+    },
+    onError: () => {
+      toast.error("Failed to save OpenAI API key");
     },
   });
 
@@ -213,6 +237,7 @@ export default function ProfilePage() {
   };
 
   const isStudent = profileForm.userType === "student";
+  const openAIKeyStatus = openAIKeyStatusQuery.data?.data;
 
   return (
     <div className="space-y-6">
@@ -290,7 +315,7 @@ export default function ProfilePage() {
           </Card>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="glass-panel grid h-auto w-full grid-cols-2 rounded-xl p-1.5">
+            <TabsList className="glass-panel grid h-auto w-full grid-cols-3 rounded-xl p-1.5">
               <TabsTrigger
                 value="profile"
                 className="flex items-center gap-2 data-[state=active]:border-border data-[state=active]:bg-background/95"
@@ -305,6 +330,15 @@ export default function ProfilePage() {
                 <Shield className="h-4 w-4" />
                 Security
               </TabsTrigger>
+              {!isAdmin ? (
+                <TabsTrigger
+                  value="openai"
+                  className="flex items-center gap-2 data-[state=active]:border-border data-[state=active]:bg-background/95"
+                >
+                  <KeyRound className="h-4 w-4" />
+                  OpenAI Key
+                </TabsTrigger>
+              ) : null}
             </TabsList>
 
             <TabsContent value="profile" className="mt-6">
@@ -523,6 +557,72 @@ export default function ProfilePage() {
                 </CardContent>
               </Card>
             </TabsContent>
+
+            {!isAdmin ? (
+              <TabsContent value="openai" className="mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-xs">OpenAI API Key</CardTitle>
+                    <CardDescription className="text-xs">
+                      Add your own OpenAI key. It is encrypted in backend storage and used only for
+                      your pipeline runs.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="rounded-lg border p-3 text-xs">
+                      {openAIKeyStatusQuery.isLoading ? (
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Checking key status...
+                        </div>
+                      ) : openAIKeyStatusQuery.isError ? (
+                        <div className="text-destructive">Unable to fetch key status right now.</div>
+                      ) : openAIKeyStatus?.is_configured ? (
+                        <div className="text-emerald-600">
+                          Configured {openAIKeyStatus.key_hint ? `(${openAIKeyStatus.key_hint})` : ""}
+                        </div>
+                      ) : (
+                        <div className="text-amber-700">No key configured yet.</div>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="openaiKey" className="text-xs">
+                        OpenAI API Key
+                      </Label>
+                      <Input
+                        id="openaiKey"
+                        type="password"
+                        value={openAIKeyInput}
+                        onChange={(e) => setOpenAIKeyInput(e.target.value)}
+                        placeholder="sk-..."
+                        className="text-xs"
+                      />
+                    </div>
+
+                    <div className="flex justify-end">
+                      <Button
+                        type="button"
+                        disabled={
+                          saveOpenAIKeyMutation.isPending || openAIKeyInput.trim().length < 20
+                        }
+                        onClick={() => saveOpenAIKeyMutation.mutate(openAIKeyInput.trim())}
+                        className="text-xs"
+                      >
+                        {saveOpenAIKeyMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          "Save Key"
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            ) : null}
           </Tabs>
         </>
       )}

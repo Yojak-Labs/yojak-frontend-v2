@@ -62,6 +62,11 @@ export interface UpdateUserRequest {
   company?: string | null;
 }
 
+export interface UserOpenAIKeyStatus {
+  is_configured: boolean;
+  key_hint?: string;
+}
+
 export type AccountStatus = "active" | "deactive";
 
 // Project types

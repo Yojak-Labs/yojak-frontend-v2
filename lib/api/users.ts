@@ -1,5 +1,11 @@
 import { apiClient, unwrapApiData } from "./client";
-import type { User, ApiResponse, UpdateUserRequest, AccountStatus } from "../types";
+import type {
+  User,
+  ApiResponse,
+  UpdateUserRequest,
+  AccountStatus,
+  UserOpenAIKeyStatus,
+} from "../types";
 
 export const usersApi = {
   getAll: async (status?: AccountStatus): Promise<ApiResponse<User[]>> => {
@@ -53,6 +59,32 @@ export const usersApi = {
       return {
         success: false,
         error: err.response?.data?.message || "Failed to delete user",
+      };
+    }
+  },
+
+  getOpenAIKeyStatus: async (): Promise<ApiResponse<UserOpenAIKeyStatus>> => {
+    try {
+      const response = await apiClient.get("/users/openai-key");
+      return { success: true, data: unwrapApiData<UserOpenAIKeyStatus>(response.data) };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return {
+        success: false,
+        error: err.response?.data?.message || "Failed to fetch OpenAI key status",
+      };
+    }
+  },
+
+  setOpenAIKey: async (apiKey: string): Promise<ApiResponse<UserOpenAIKeyStatus>> => {
+    try {
+      const response = await apiClient.put("/users/openai-key", { api_key: apiKey });
+      return { success: true, data: unwrapApiData<UserOpenAIKeyStatus>(response.data) };
+    } catch (error: unknown) {
+      const err = error as { response?: { data?: { message?: string } } };
+      return {
+        success: false,
+        error: err.response?.data?.message || "Failed to save OpenAI API key",
       };
     }
   },
