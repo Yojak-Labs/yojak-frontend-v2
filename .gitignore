@@ -16,3 +16,5 @@ node_modules
 .DS_Store
 .vscode/
 tmp/
+next-env.d.ts
+tsconfig.tsbuildinfo
